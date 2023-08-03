@@ -25,7 +25,7 @@ public class ShopKeep {
         commands.put("ping", event -> event.getMessage()
                 .getChannel().block()
                 .createMessage("no").block());
-        commands.put("test", event -> {
+        commands.put("gen", event -> {
             event.getMessage()
                     .getChannel().block()
                     .createMessage("heard").block();
