@@ -10,6 +10,7 @@ import discord4j.core.object.entity.User;
 import io.github.cdimascio.dotenv.Dotenv;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,8 +28,8 @@ public class ShopKeep {
             event.getMessage()
                     .getChannel().block()
                     .createMessage("heard").block();
-            String testing = event.getMessage().getContent();
-            System.out.println(testing);
+            SRDHelper testhelper = new SRDHelper(3,0, new String[]{"-no-vehicles"});
+            testhelper.generateRequestedItems(3);
         });
     }
     public static void main(String[] args) {
