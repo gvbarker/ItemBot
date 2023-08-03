@@ -18,7 +18,6 @@ interface Command {
 }
 public class ShopKeep {
     private static final Map<String, Command> commands = new HashMap<>();
-    private static final SRDJSONHelper reader = new SRDJSONHelper();
     private static final String cmdPrefix = "!";
     static {
         commands.put("ping", event -> event.getMessage()
@@ -28,7 +27,6 @@ public class ShopKeep {
             event.getMessage()
                     .getChannel().block()
                     .createMessage("heard").block();
-            reader.test();
             String testing = event.getMessage().getContent();
             System.out.println(testing);
         });

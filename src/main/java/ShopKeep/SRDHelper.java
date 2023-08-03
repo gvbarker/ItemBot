@@ -2,11 +2,13 @@ package ShopKeep;
 
 
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.util.Map;
 
 public class SRDHelper {
     private int numMundane;
@@ -24,6 +26,21 @@ public class SRDHelper {
         this.numMagical = numMagical;
     }
 
+    public JSONArray getRequestedItems() {
+        return this.requestedItems;
+    }
+    private JSONArray generateRequestedMundaneItems(int numIterations) {
+
+        return;
+    }
+    public void generateRequestedItems(int numIterations) {
+        JSONArray[] retArr = new JSONArray[numIterations];
+        for (int i = 0; i < numIterations; i++) {
+            JSONArray mundanes = generateRequestedMundaneItems(this.numMundane);
+
+        }
+    }
+
     /*
     vars: Int numMundane, Int numMagical, Array numFilters
     functions:
@@ -32,6 +49,7 @@ public class SRDHelper {
     getMundanes(JSONArray filtered)
     getMagicals(JSONArray filtered)
     concatJSONArrays(Array lists)
-    return
+    generateRequestedItems(int numIterations)
+    getRequestedItems()
     * */
 }
