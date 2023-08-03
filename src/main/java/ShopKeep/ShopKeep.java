@@ -8,6 +8,7 @@ import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.Message;
 import discord4j.core.object.entity.User;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.json.simple.JSONArray;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
@@ -29,7 +30,7 @@ public class ShopKeep {
                     .getChannel().block()
                     .createMessage("heard").block();
             SRDHelper testhelper = new SRDHelper(3,0, new String[]{"-no-vehicles"});
-            testhelper.generateRequestedItems(3);
+            JSONArray[] testarray = testhelper.generateRequestedItems(3);
         });
     }
     public static void main(String[] args) {

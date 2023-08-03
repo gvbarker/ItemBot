@@ -70,7 +70,7 @@ public class SRDHelper {
     private JSONArray generateItems(int count, String type) {
         JSONParser parser = new JSONParser();
         JSONArray items = new JSONArray();
-        String srdPath = (type.equals("magical")) ? "src/main/resources/5e-SRD-Equipment.json" : "src/main/resources/5e-SRD-Magic-Items.json";
+        String srdPath = (type.equals("mundane")) ? "src/main/resources/5e-SRD-Equipment.json" : "src/main/resources/5e-SRD-Magic-Items.json";
         Object srdContent;
         Random rand = new Random();
         try (FileReader reader = new FileReader(srdPath)) {
@@ -88,12 +88,15 @@ public class SRDHelper {
         return items;
     }
 
-    public void generateRequestedItems(int numIterations) {
+    public JSONArray[] generateRequestedItems(int numIterations) {
         JSONArray[] retArr = new JSONArray[numIterations];
         for (int i = 0; i < numIterations; i++) {
-            JSONArray test = generateItems(this.numMundane, "magical");
-            printJSONArray(test);
+            JSONArray mundane = generateItems(this.numMundane, "mundane");
+            retArr[i] = mundane;
+            JSONArray magical = generateItems(this.numMagical, "magical");
+            retArr[i].add(magical);
         }
+        return retArr;
     }
     /*
     vars: Int numMundane, Int numMagical, Array numFilters
