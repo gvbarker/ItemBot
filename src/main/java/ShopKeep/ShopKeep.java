@@ -35,6 +35,7 @@ public class ShopKeep {
         commands.put("gen", event -> {
             CommandLineParser clp = new DefaultParser();
             ArrayList<String> filters = new ArrayList<>();
+            int mundane = 0, magical = 0, iterations = 0;
             try {
                 CommandLine cl = clp.parse(commandOptions, event.getMessage()
                         .getContent()
@@ -43,16 +44,17 @@ public class ShopKeep {
                         if (cl.hasOption(filter)) {
                             filters.add(srdindex);
                         }});
-                int mundane = Integer.parseInt(cl.getArgList().get(1));
-                int magical = Integer.parseInt(cl.getArgList().get(2));
-                SRDHelper itemGenerator = new SRDHelper(mundane, magical, filters.toArray(new String[0]));
-                itemGenerator.generateRequestedItems(3);
-            } catch (ParseException e) {
-                e.printStackTrace();
+                mundane = Integer.parseInt(cl.getArgList().get(1));
+                magical = Integer.parseInt(cl.getArgList().get(2));
+                iterations = Integer.parseInt(cl.getArgList().get(3));
+
+            } catch (IndexOutOfBoundsException | ParseException e) {
                 event.getMessage()
                         .getChannel().block()
-                        .createMessage(getHelpMenu());
+                        .createMessage(getHelpMenu()).block();
             }
+            SRDHelper itemGenerator = new SRDHelper(mundane, magical, filters.toArray(new String[0]));
+            itemGenerator.generateRequestedItems(iterations);
         });
         commands.put("help", event -> {
             event.getMessage()

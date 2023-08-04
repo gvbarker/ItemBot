@@ -93,16 +93,10 @@ public class SRDHelper {
             JSONArray magical = generateItems(this.numMagical, "magical");
             retArr[i].addAll(magical);
         }
+        for (JSONArray i:
+             retArr) {
+            printJSONArray(i);
+        }
         return retArr;
     }
-    /*
-    vars: Int numMundane, Int numMagical, Array numFilters
-    functions:
-    getSRDLists(Boolean mun, Boolean mag)
-    filterSRDList(Array filter, JSONArray list)
-
-    concatJSONArrays(Array lists)
-    generateRequestedItems(int numIterations)
-    getRequestedItems()
-    * */
 }
