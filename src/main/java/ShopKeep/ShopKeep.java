@@ -3,10 +3,15 @@ package ShopKeep;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.rest.util.Color;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.commons.cli.*;
+import org.json.simple.JSONArray;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,9 +29,9 @@ public class ShopKeep {
     private static final String cmdPrefix = "!";
     private static final Options commandOptions = new Options();
     static {
-        commandOptions.addOption("no_weapons", false, "Remove weapons from shop lists.");
-        commandOptions.addOption("no_vehicles", false, "Remove vehicles and mounts from shop lists.");
-        commandOptions.addOption("no_armors", false, "Remove armor pieces from shop lists.");
+        commandOptions.addOption("no_weapons", false, "\tRemove weapons from shop lists.");
+        commandOptions.addOption("no_vehicles", false, "\tRemove vehicles and mounts from shop lists.");
+        commandOptions.addOption("no_armors", false, "\tRemove armor pieces from shop lists.");
 
         commands.put("ping", event -> event.getMessage()
                 .getChannel().block()
@@ -51,27 +56,43 @@ public class ShopKeep {
             } catch (IndexOutOfBoundsException | ParseException e) {
                 event.getMessage()
                         .getChannel().block()
-                        .createMessage(getHelpMenu()).block();
+                        .createMessage(generateHelpMenu()).block();
             }
             SRDHelper itemGenerator = new SRDHelper(mundane, magical, filters.toArray(new String[0]));
-            itemGenerator.generateRequestedItems(iterations);
+            JSONArray[] reqItems = itemGenerator.generateRequestedItems(iterations);
         });
         commands.put("help", event -> {
             event.getMessage()
                     .getChannel().block()
-                    .createMessage(getHelpMenu()).block();
+                    .createMessage(generateHelpMenu()).block();
         });
     }
 
-    private static String getHelpMenu() {
+    private static EmbedCreateSpec generateHelpMenu() {
         HelpFormatter formatter = new HelpFormatter();
         StringWriter out = new StringWriter();
         PrintWriter pw = new PrintWriter(out);
-        formatter.printUsage(pw, 80, "!gen <# of mundane items> <# of magic items> <# of shop inventories generated> [options]");
+        formatter.printUsage(pw, 100, "!gen <# of mundane items> <# of magic items> <# of shop inventories to generate> [options]");
         formatter.printOptions(pw, 80, commandOptions, 0, 6);
         pw.flush();
-        return out.toString();
+        String[] helpLines = out.toString().split("\n");
+        EmbedCreateSpec helpEmbed = EmbedCreateSpec.builder()
+                .color(Color.RED)
+                .title("Help Command")
+                .description("Displays !gen syntax")
+                .addField("\u200B", "\u200B", false)
+                .addField("Syntax", helpLines[0], false)
+                .addField("\u200B", "\u200B", false)
+                .addField("Options", "", false)
+                .addField(helpLines[1], helpLines[2], false)
+                .addField(helpLines[3], helpLines[4], false)
+                .addField(helpLines[5], helpLines[6], false)
+                .timestamp(Instant.now())
+                .build();
+        return helpEmbed;
     }
+
+
     public static void main(String[] args) {
 
         Dotenv dotenv = Dotenv.load();

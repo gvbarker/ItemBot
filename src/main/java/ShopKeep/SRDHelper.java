@@ -30,16 +30,6 @@ public class SRDHelper {
         this.numMagical = numMagical;
     }
 
-    public JSONArray getRequestedItems() {
-        return this.requestedItems;
-    }
-    private void printJSONArray(JSONArray jarr) {
-        jarr.forEach(item -> {
-            JSONObject it = (JSONObject) item;
-            System.out.println( (String) it.get("name"));
-        });
-
-    }
     private boolean checkRemoveItem(JSONObject item) {
         for (String rule : this.filters) {
             item = (JSONObject) item.get("equipment_category");
@@ -92,10 +82,6 @@ public class SRDHelper {
             retArr[i] = mundane;
             JSONArray magical = generateItems(this.numMagical, "magical");
             retArr[i].addAll(magical);
-        }
-        for (JSONArray i:
-             retArr) {
-            printJSONArray(i);
         }
         return retArr;
     }
