@@ -17,11 +17,7 @@ public class SRDHelper {
     private String[] filters;
     private JSONArray requestedItems;
 
-    private final Map<String, String> filterMap = new HashMap<>(Map.of(
-            "-no-vehicles", "mounts-and-vehicles",
-            "-no-weapons", "weapon",
-            "-no-armors", "armor"
-    ));
+
 
 
     public SRDHelper(int numMundane, int numMagical, String[] filters) {
@@ -48,7 +44,7 @@ public class SRDHelper {
         for (String rule : this.filters) {
             item = (JSONObject) item.get("equipment_category");
             String index = (String) item.get("index");
-            boolean filterCheck = (filterMap.get(rule).equals(index));
+            boolean filterCheck = (rule.equals(index));
             if (filterCheck) {
                 return true;
             }
@@ -68,8 +64,9 @@ public class SRDHelper {
     }
 
     private JSONArray generateItems(int count, String type) {
-        JSONParser parser = new JSONParser();
         JSONArray items = new JSONArray();
+        if (count < 1) { return items; }
+        JSONParser parser = new JSONParser();
         String srdPath = (type.equals("mundane")) ? "src/main/resources/5e-SRD-Equipment.json" : "src/main/resources/5e-SRD-Magic-Items.json";
         Object srdContent;
         Random rand = new Random();
@@ -80,7 +77,7 @@ public class SRDHelper {
             throw new RuntimeException(e);
         }
         JSONArray itemList = (JSONArray) srdContent;
-        itemList = filterSRDList(itemList);
+        itemList = (filters.length < 1) ? itemList : filterSRDList(itemList);
         for (int i = 0; i < count; i++) {
             //noinspection unchecked
             items.add(itemList.get(rand.nextInt(itemList.size())));
@@ -94,7 +91,7 @@ public class SRDHelper {
             JSONArray mundane = generateItems(this.numMundane, "mundane");
             retArr[i] = mundane;
             JSONArray magical = generateItems(this.numMagical, "magical");
-            retArr[i].add(magical);
+            retArr[i].addAll(magical);
         }
         return retArr;
     }
