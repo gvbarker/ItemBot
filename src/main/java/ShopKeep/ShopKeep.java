@@ -1,19 +1,12 @@
 package ShopKeep;
 
-import discord4j.core.DiscordClient;
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
-import discord4j.core.event.domain.lifecycle.ReadyEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.Message;
-import discord4j.core.object.entity.User;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.json.simple.JSONArray;
-import reactor.core.publisher.Mono;
-
-import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.HashMap;
@@ -41,16 +34,20 @@ public class ShopKeep {
             JSONArray[] testarray = testhelper.generateRequestedItems(3);
         });
         commands.put("help", event -> {
-            HelpFormatter formatter = new HelpFormatter();
-            StringWriter out = new StringWriter();
-            PrintWriter pw = new PrintWriter(out);
-            formatter.printHelp(pw, 80, "!gen", "ShopKeep", commandOptions,
-                    formatter.getLeftPadding(), formatter.getDescPadding(), "", true);
-            pw.flush();
             event.getMessage()
                     .getChannel().block()
-                    .createMessage(out.toString()).block();
+                    .createMessage(getHelpMenu().toString()).block();
         });
+    }
+
+    private static StringWriter getHelpMenu() {
+        HelpFormatter formatter = new HelpFormatter();
+        StringWriter out = new StringWriter();
+        PrintWriter pw = new PrintWriter(out);
+        formatter.printUsage(pw, 80, "!gen <# of mundane items> <# of magic items> [options]");
+        formatter.printOptions(pw, 80, commandOptions, 0, 6);
+        pw.flush();
+        return out;
     }
     public static void main(String[] args) {
 
