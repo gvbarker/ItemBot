@@ -2,18 +2,30 @@ package ShopKeep;
 
 import discord4j.core.DiscordClientBuilder;
 import discord4j.core.GatewayDiscordClient;
+import discord4j.core.event.domain.interaction.ButtonInteractionEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
+import discord4j.core.object.component.ActionRow;
+import discord4j.core.object.component.Button;
+import discord4j.core.object.entity.Message;
 import discord4j.core.spec.EmbedCreateSpec;
+import discord4j.core.spec.InteractionReplyEditSpec;
+import discord4j.core.spec.MessageCreateSpec;
+import discord4j.core.spec.MessageEditSpec;
 import discord4j.rest.util.Color;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.commons.cli.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import reactor.core.publisher.Mono;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 
 interface Command {
     void execute(MessageCreateEvent event);
@@ -27,6 +39,8 @@ public class ShopKeep {
     private static final Map<String, Command> commands = new HashMap<>();
     private static final String cmdPrefix = "!";
     private static final Options commandOptions = new Options();
+    private static ArrayList<ArrayList<EmbedCreateSpec>> allItems = new ArrayList<>();
+
     static {
         commandOptions.addOption("no_weapons", false, "\tRemove weapons from shop lists.");
         commandOptions.addOption("no_vehicles", false, "\tRemove vehicles and mounts from shop lists.");
@@ -39,6 +53,10 @@ public class ShopKeep {
         commands.put("gen", event -> {
             CommandLineParser clp = new DefaultParser();
             ArrayList<String> filters = new ArrayList<>();
+
+            if (!allItems.isEmpty()) {
+                allItems.clear();
+            }
             int mundane = 0, magical = 0, iterations = 0;
             try {
                 CommandLine cl = clp.parse(commandOptions, event.getMessage()
@@ -60,28 +78,36 @@ public class ShopKeep {
             SRDHelper itemGenerator = new SRDHelper(mundane, magical, filters.toArray(new String[0]));
             JSONArray[] reqItems = itemGenerator.generateRequestedItems(iterations);
             for (int i=0; i<reqItems.length; i++) {
-                EmbedCreateSpec iter = generateDayEmbed(reqItems[i], i, mundane, magical, filters.toArray(new String[0]));
+                allItems.add(generateDayEmbed(reqItems[i], i, mundane, magical, filters.toArray(new String[0])));
+            }
+            for (ArrayList<EmbedCreateSpec> allItem : allItems) {
                 event.getMessage()
                         .getChannel().block()
-                        .createMessage(iter).block();
+                        .createMessage(allItem.get(0))
+                        .withComponents(
+                                ActionRow.of(
+                                        Button.primary("pageLeft", "<"),
+                                        Button.primary("pageRight", ">")))
+                        .block();
             }
         });
         commands.put("help", event -> {
             event.getMessage()
                     .getChannel().block()
-                    .createMessage(generateHelpMenu()).block();
+                    .createMessage(MessageCreateSpec.builder()
+                            .addEmbed(generateHelpMenu())
+                            .build())
+                    .block();
         });
     }
 
-    private static EmbedCreateSpec generateDayEmbed(JSONArray day, int iteration, int numMun, int numMag, String[] filters) {
-        for (Object i: day) {
-            System.out.println(i + "\n\n");
-        }
-        EmbedCreateSpec.Builder iterBuilder = EmbedCreateSpec.builder();
-        iterBuilder.color(Color.RED)
-                .title("Inventory #"+(iteration+1))
-                .description(String.format("#of Mundane items: %d\n#of Magical items: %d\nFilters: %s", numMun, numMag, Arrays.toString(filters)));
+    private static ArrayList<EmbedCreateSpec> generateDayEmbed(JSONArray day, int iteration, int numMun, int numMag, String[] filters) {
+        ArrayList<EmbedCreateSpec> dayItems = new ArrayList<>();
         for (Object i : day) {
+            EmbedCreateSpec.Builder iterBuilder = EmbedCreateSpec.builder();
+            iterBuilder.color(Color.RED)
+                    .title("Inventory #"+(iteration+1))
+                    .description(String.format("#of Mundane items: %d\n#of Magical items: %d\nFilters: %s", numMun, numMag, Arrays.toString(filters)));
 
             JSONObject item = (JSONObject) i;
             JSONObject equipmentCat = (JSONObject) item.get("equipment_category");
@@ -100,8 +126,9 @@ public class ShopKeep {
                 iterBuilder.addField("Description", item.get("desc").toString(), false);
             }
             iterBuilder.addField("","\u200B", false);
+            dayItems.add(iterBuilder.build());
         }
-        return iterBuilder.build();
+        return dayItems;
     }
     private static EmbedCreateSpec generateHelpMenu() {
         HelpFormatter formatter = new HelpFormatter();
@@ -134,7 +161,6 @@ public class ShopKeep {
         final GatewayDiscordClient client = DiscordClientBuilder.create(dotenv.get("BOT_TOKEN")).build()
                 .login()
                 .block();
-
         client.getEventDispatcher().on(MessageCreateEvent.class)
                         .subscribe(event -> {
                             final String content = event.getMessage().getContent();
@@ -145,7 +171,18 @@ public class ShopKeep {
                                 }
                             }
                         });
-
+        client.getEventDispatcher().on(ButtonInteractionEvent.class, event -> {
+            if (event.getCustomId().equals("pageLeft")) {
+                event.getMessage().get().edit().withEmbeds(allItems.get())
+            }
+            if (event.getCustomId().equals("testb")) {
+                event.getMessage().get().edit().withContent("s").subscribe();
+                return event.reply("You clicked me!").withEphemeral(true);
+            } else {
+                // Ignore it
+                return Mono.empty();
+            }
+        }).subscribe();
         client.onDisconnect().block();
     }
 }
