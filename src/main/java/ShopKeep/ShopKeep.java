@@ -8,13 +8,12 @@ import discord4j.rest.util.Color;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.commons.cli.*;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 interface Command {
     void execute(MessageCreateEvent event);
@@ -60,6 +59,12 @@ public class ShopKeep {
             }
             SRDHelper itemGenerator = new SRDHelper(mundane, magical, filters.toArray(new String[0]));
             JSONArray[] reqItems = itemGenerator.generateRequestedItems(iterations);
+            for (int i=0; i<reqItems.length; i++) {
+                EmbedCreateSpec iter = generateDayEmbed(reqItems[i], i, mundane, magical, filters.toArray(new String[0]));
+                event.getMessage()
+                        .getChannel().block()
+                        .createMessage(iter).block();
+            }
         });
         commands.put("help", event -> {
             event.getMessage()
@@ -68,6 +73,36 @@ public class ShopKeep {
         });
     }
 
+    private static EmbedCreateSpec generateDayEmbed(JSONArray day, int iteration, int numMun, int numMag, String[] filters) {
+        for (Object i: day) {
+            System.out.println(i + "\n\n");
+        }
+        EmbedCreateSpec.Builder iterBuilder = EmbedCreateSpec.builder();
+        iterBuilder.color(Color.RED)
+                .title("Inventory #"+(iteration+1))
+                .description(String.format("#of Mundane items: %d\n#of Magical items: %d\nFilters: %s", numMun, numMag, Arrays.toString(filters)));
+        for (Object i : day) {
+
+            JSONObject item = (JSONObject) i;
+            JSONObject equipmentCat = (JSONObject) item.get("equipment_category");
+
+            iterBuilder.addField("Name", item.get("name").toString(), true);
+            iterBuilder.addField("Equipment Type", equipmentCat.get("name").toString(), true);
+            if (item.get("cost") != null) {
+                JSONObject pricing = (JSONObject) item.get("cost");
+                iterBuilder.addField("Rec. Price", pricing.get("quantity") + " " + pricing.get("unit"), true);
+            }
+            else {
+                JSONObject rarity = (JSONObject) item.get("rarity");
+                iterBuilder.addField("Rarity", rarity.get("name").toString(), true);
+            }
+            if (item.get("desc") != null) {
+                iterBuilder.addField("Description", item.get("desc").toString(), false);
+            }
+            iterBuilder.addField("","\u200B", false);
+        }
+        return iterBuilder.build();
+    }
     private static EmbedCreateSpec generateHelpMenu() {
         HelpFormatter formatter = new HelpFormatter();
         StringWriter out = new StringWriter();
@@ -112,18 +147,5 @@ public class ShopKeep {
                         });
 
         client.onDisconnect().block();
-//        DiscordClient client = DiscordClient.create(dotenv.get("BOT_TOKEN"));
-//        Mono<Void> login = client.withGateway((GatewayDiscordClient gateway) ->
-//                gateway.on(MessageCreateEvent.class, event -> {
-//                    Message message = event.getMessage();
-//                    if (message.getContent().equalsIgnoreCase("!ping")) {
-//                        System.out.println("fuck");
-//                        return message.getChannel()
-//                                .flatMap(channel -> channel.createMessage("pong!"));
-//                    }
-//
-//                    return Mono.empty();
-//                }));
-//        login.block();
     }
 }
