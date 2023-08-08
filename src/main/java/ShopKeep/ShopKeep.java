@@ -19,6 +19,7 @@ import java.io.StringWriter;
 import java.time.Instant;
 import java.util.*;
 
+//TODO: WORK ON EMBED LOOPING BUG
 interface Command {
     void execute(MessageCreateEvent event);
 }
@@ -159,8 +160,9 @@ public class ShopKeep {
         String embedItemInfo = (event.getMessage().get()
                 .getEmbeds().get(0)
                 .getTitle().get());
-        int itemNum = Character.getNumericValue(embedItemInfo.charAt(embedItemInfo.length()-1))-1;
-        int iterationNum = Character.getNumericValue(embedItemInfo.charAt(11))-1;
+        String[] titleNums = embedItemInfo.replaceAll("\\D+", " ").split(" ");
+        int iterationNum = Integer.parseInt(titleNums[1])-1;
+        int itemNum = Integer.parseInt(titleNums[2])-1;
         EmbedCreateSpec newItem = allItems.get(iterationNum).get(itemNum);
         try {
             newItem = allItems.get(iterationNum).get(itemNum + change);
@@ -173,9 +175,9 @@ public class ShopKeep {
                 .getEmbeds().get(0)
                 .getTitle().get());
 
-        int itemNum = Character.getNumericValue(embedItemInfo.charAt(embedItemInfo.length() - 1)) - 1;
-        int iterationNum = Character.getNumericValue(embedItemInfo.charAt(11)) - 1;
-
+        String[] titleNums = embedItemInfo.replaceAll("\\D+", " ").split(" ");
+        int itemNum = Integer.parseInt(titleNums[2])-1;
+        int iterationNum = Integer.parseInt(titleNums[1])-1;
         EmbedCreateSpec item = allItems.get(iterationNum).get(itemNum);
         String type = (item.fields().get(2).name().equals("Rec. Price")) ? "mundane" : "magic";
         String itemName = item.fields().get(0).value();
@@ -192,17 +194,22 @@ public class ShopKeep {
         itemFocus.addField("Equipment Type", subCat.get("name").toString(), true);
 
         if (focusItem.get("cost") != null) {
+            System.out.println("inval cost");
             subCat = (JSONObject) focusItem.get("cost");
             itemFocus.addField("Rec. Price", subCat.get("quantity") + " " + subCat.get("unit"), true);
         }
         if (focusItem.get("rarity") != null) {
+            System.out.println("rar");
             subCat = (JSONObject) focusItem.get("rarity");
             itemFocus.addField("Rarity", subCat.get("name").toString(), true);
         }
         if (focusItem.get("desc") != null) {
             if (focusItem.get("desc").toString().length() < 4096) {
+                System.out.println("fits");
+                System.out.println(focusItem.get("desc").toString().length());
                 itemFocus.description(focusItem.get("desc").toString());
             } else {
+                System.out.println("no fit");
                 //lazy fix until i figure out a workaround to obscenely long item descriptions
                 descLengthFlag = true;
             }
@@ -215,11 +222,16 @@ public class ShopKeep {
             return;
         }
         event.reply()
+                .withContent("(Item description is too large for embed to handle)\n")
                 .withEmbeds(itemFocus.build())
-                .withContent("(Item description is too large for embed to handle)\n"
-                        +focusItem.get("desc").toString())
-                .withEphemeral(true)
-                .subscribe();
+                .withEphemeral(true).subscribe();
+        String[] chunkedString = focusItem.get("desc").toString().split("(?<=\\G.{" + 2000 + "})");
+        for (String chunk : chunkedString){
+            event.reply()
+                    .withContent(chunk)
+                    .withEphemeral(true)
+                    .subscribe();
+        }
     }
     public static void main(String[] args) {
 

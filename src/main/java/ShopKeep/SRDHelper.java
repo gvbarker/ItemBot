@@ -11,6 +11,8 @@ import java.io.IOException;
 
 import java.util.*;
 
+//TODO: IMPLEMENT DUPLICATE PREVENTION
+
 public class SRDHelper {
     private int numMundane;
     private int numMagical;
