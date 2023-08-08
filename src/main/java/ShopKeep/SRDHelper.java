@@ -29,7 +29,31 @@ public class SRDHelper {
         this.numMundane = numMundane;
         this.numMagical = numMagical;
     }
+    public SRDHelper() {
 
+    }
+    public JSONObject getSRDItem(String itemName, String type) {
+        JSONObject returnItem = new JSONObject();
+        JSONParser parser = new JSONParser();
+        String srdPath = (type.equals("mundane")) ? "src/main/resources/5e-SRD-Equipment.json" : "src/main/resources/5e-SRD-Magic-Items.json";
+        Object srdContent;
+        Random rand = new Random();
+        try (FileReader reader = new FileReader(srdPath)) {
+            srdContent = parser.parse(reader);
+        }
+        catch (IOException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+        JSONArray itemList = (JSONArray) srdContent;
+        //this is lazy, but I'm tired and return values complain if originating in lambda forEach functions
+        for (int i = 0; i < itemList.size(); i++) {
+            JSONObject item = (JSONObject) itemList.get(i);
+            if (item.get("name").equals(itemName)) {
+                returnItem = item;
+            }
+        }
+        return returnItem;
+    }
     private boolean checkRemoveItem(JSONObject item) {
         for (String rule : this.filters) {
             item = (JSONObject) item.get("equipment_category");

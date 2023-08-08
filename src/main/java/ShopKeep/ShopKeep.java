@@ -6,26 +6,18 @@ import discord4j.core.event.domain.interaction.ButtonInteractionEvent;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.component.ActionRow;
 import discord4j.core.object.component.Button;
-import discord4j.core.object.entity.Message;
 import discord4j.core.spec.EmbedCreateSpec;
-import discord4j.core.spec.InteractionReplyEditSpec;
 import discord4j.core.spec.MessageCreateSpec;
-import discord4j.core.spec.MessageEditSpec;
 import discord4j.rest.util.Color;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.apache.commons.cli.*;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import reactor.core.publisher.Mono;
 
-import javax.swing.*;
-import java.awt.*;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.TimeoutException;
 
 interface Command {
     void execute(MessageCreateEvent event);
@@ -40,6 +32,7 @@ public class ShopKeep {
     private static final String cmdPrefix = "!";
     private static final Options commandOptions = new Options();
     private static ArrayList<ArrayList<EmbedCreateSpec>> allItems = new ArrayList<>();
+    private static EmbedCreateSpec item;
 
     static {
         commandOptions.addOption("no_weapons", false, "\tRemove weapons from shop lists.");
@@ -87,7 +80,8 @@ public class ShopKeep {
                         .withComponents(
                                 ActionRow.of(
                                         Button.primary("pageLeft", "<"),
-                                        Button.primary("pageRight", ">")))
+                                        Button.primary("pageRight", ">"),
+                                        Button.primary("expandItem", "Expand")))
                         .block();
             }
         });
@@ -112,6 +106,7 @@ public class ShopKeep {
             JSONObject item = (JSONObject) i;
             JSONObject equipmentCat = (JSONObject) item.get("equipment_category");
 
+
             iterBuilder.addField("Name", item.get("name").toString(), true);
             iterBuilder.addField("Equipment Type", equipmentCat.get("name").toString(), true);
             if (item.get("cost") != null) {
@@ -123,7 +118,12 @@ public class ShopKeep {
                 iterBuilder.addField("Rarity", rarity.get("name").toString(), true);
             }
             if (item.get("desc") != null) {
-                iterBuilder.addField("Description", item.get("desc").toString(), false);
+                if (item.get("desc").toString().length() > 1024) {
+                    iterBuilder.addField("Description", item.get("desc").toString().substring(0, 1020) + "...", false);
+                }
+                else {
+                    iterBuilder.addField("Description", item.get("desc").toString(), false);
+                }
             }
             iterBuilder.addField("","\u200B", false);
             dayItems.add(iterBuilder.build());
@@ -155,7 +155,7 @@ public class ShopKeep {
     }
 
 
-    private static EmbedCreateSpec getItemEmbedEdit(ButtonInteractionEvent event, int change) {
+    private static void handleEmbedSwitch(ButtonInteractionEvent event, int change) {
         String embedItemInfo = (event.getMessage().get()
                 .getEmbeds().get(0)
                 .getTitle().get());
@@ -165,13 +165,62 @@ public class ShopKeep {
         try {
             newItem = allItems.get(iterationNum).get(itemNum + change);
         }
-        catch (IndexOutOfBoundsException e) {
-            e.printStackTrace();
-        }
-        System.out.println(newItem);
-        return newItem;
+        catch (IndexOutOfBoundsException ignored) {}
+        event.getMessage().get().edit().withEmbeds(newItem).subscribe();
     }
+    private static void generateExpandedMessage(ButtonInteractionEvent event) {
+        String embedItemInfo = (event.getMessage().get()
+                .getEmbeds().get(0)
+                .getTitle().get());
 
+        int itemNum = Character.getNumericValue(embedItemInfo.charAt(embedItemInfo.length() - 1)) - 1;
+        int iterationNum = Character.getNumericValue(embedItemInfo.charAt(11)) - 1;
+
+        EmbedCreateSpec item = allItems.get(iterationNum).get(itemNum);
+        String type = (item.fields().get(2).name().equals("Rec. Price")) ? "mundane" : "magic";
+        String itemName = item.fields().get(0).value();
+        boolean descLengthFlag = false;
+
+        SRDHelper itemGrabber = new SRDHelper();
+        JSONObject focusItem = itemGrabber.getSRDItem(itemName, type);
+        EmbedCreateSpec.Builder itemFocus = EmbedCreateSpec.builder();
+
+        itemFocus.color(Color.RED)
+                .title(focusItem.get("name").toString());
+
+        JSONObject subCat = (JSONObject) focusItem.get("equipment_category");
+        itemFocus.addField("Equipment Type", subCat.get("name").toString(), true);
+
+        if (focusItem.get("cost") != null) {
+            subCat = (JSONObject) focusItem.get("cost");
+            itemFocus.addField("Rec. Price", subCat.get("quantity") + " " + subCat.get("unit"), true);
+        }
+        if (focusItem.get("rarity") != null) {
+            subCat = (JSONObject) focusItem.get("rarity");
+            itemFocus.addField("Rarity", subCat.get("name").toString(), true);
+        }
+        if (focusItem.get("desc") != null) {
+            if (focusItem.get("desc").toString().length() < 4096) {
+                itemFocus.description(focusItem.get("desc").toString());
+            } else {
+                //lazy fix until i figure out a workaround to obscenely long item descriptions
+                descLengthFlag = true;
+            }
+        }
+        if (!descLengthFlag) {
+            event.reply()
+                    .withEmbeds(itemFocus.build())
+                    .withEphemeral(true)
+                    .subscribe();
+            return;
+        }
+        event.reply()
+                .withEmbeds(itemFocus.build())
+                .withContent("(Item description is too large for embed to handle)\n"
+                        +focusItem.get("desc").toString())
+                .withEphemeral(true)
+                .subscribe();
+    }
     public static void main(String[] args) {
 
         Dotenv dotenv = Dotenv.load();
@@ -189,26 +238,12 @@ public class ShopKeep {
                             }
                         });
         client.getEventDispatcher().on(ButtonInteractionEvent.class, event -> {
-//            if (event.getCustomId().equals("pageLeft")) {
-//                event.getMessage().get().edit().withEmbeds(allItems.get())
-//            }
             switch (event.getCustomId()) {
-                case "pageLeft":
-                    System.out.println("wrong");
-                    event.getMessage().get().edit().withEmbeds(getItemEmbedEdit(event, -1)).subscribe();
-                case "pageRight":
-                    System.out.println("right");
-                    event.getMessage().get().edit().withEmbeds(getItemEmbedEdit(event, 1)).subscribe();
+                case "pageLeft" -> handleEmbedSwitch(event, -1);
+                case "pageRight" -> handleEmbedSwitch(event, 1);
+                case "expandItem" -> generateExpandedMessage(event);
             }
-
-
-            if (event.getCustomId().equals("testb")) {
-                event.getMessage().get().edit().withContent("s").subscribe();
-                return event.reply("You clicked me!").withEphemeral(true);
-            } else {
-                // Ignore it
-                return Mono.empty();
-            }
+            return event.deferEdit();
         }).subscribe();
         client.onDisconnect().block();
     }
