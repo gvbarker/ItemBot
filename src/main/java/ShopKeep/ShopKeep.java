@@ -106,7 +106,7 @@ public class ShopKeep {
         for (Object i : day) {
             EmbedCreateSpec.Builder iterBuilder = EmbedCreateSpec.builder();
             iterBuilder.color(Color.RED)
-                    .title("Inventory #"+(iteration+1))
+                    .title("Inventory #"+(iteration+1) + " " + "Item #" + (day.indexOf(i) + 1))
                     .description(String.format("#of Mundane items: %d\n#of Magical items: %d\nFilters: %s", numMun, numMag, Arrays.toString(filters)));
 
             JSONObject item = (JSONObject) i;
@@ -155,6 +155,23 @@ public class ShopKeep {
     }
 
 
+    private static EmbedCreateSpec getItemEmbedEdit(ButtonInteractionEvent event, int change) {
+        String embedItemInfo = (event.getMessage().get()
+                .getEmbeds().get(0)
+                .getTitle().get());
+        int itemNum = Character.getNumericValue(embedItemInfo.charAt(embedItemInfo.length()-1))-1;
+        int iterationNum = Character.getNumericValue(embedItemInfo.charAt(11))-1;
+        EmbedCreateSpec newItem = allItems.get(iterationNum).get(itemNum);
+        try {
+            newItem = allItems.get(iterationNum).get(itemNum + change);
+        }
+        catch (IndexOutOfBoundsException e) {
+            e.printStackTrace();
+        }
+        System.out.println(newItem);
+        return newItem;
+    }
+
     public static void main(String[] args) {
 
         Dotenv dotenv = Dotenv.load();
@@ -172,9 +189,19 @@ public class ShopKeep {
                             }
                         });
         client.getEventDispatcher().on(ButtonInteractionEvent.class, event -> {
-            if (event.getCustomId().equals("pageLeft")) {
-                event.getMessage().get().edit().withEmbeds(allItems.get())
+//            if (event.getCustomId().equals("pageLeft")) {
+//                event.getMessage().get().edit().withEmbeds(allItems.get())
+//            }
+            switch (event.getCustomId()) {
+                case "pageLeft":
+                    System.out.println("wrong");
+                    event.getMessage().get().edit().withEmbeds(getItemEmbedEdit(event, -1)).subscribe();
+                case "pageRight":
+                    System.out.println("right");
+                    event.getMessage().get().edit().withEmbeds(getItemEmbedEdit(event, 1)).subscribe();
             }
+
+
             if (event.getCustomId().equals("testb")) {
                 event.getMessage().get().edit().withContent("s").subscribe();
                 return event.reply("You clicked me!").withEphemeral(true);
